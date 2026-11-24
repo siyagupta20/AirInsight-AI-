@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollution Explorer & Live Conditions | AirInsight AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .explorer-container {
+            max-width: 1250px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        .explorer-hero {
+            text-align: center;
+            padding: 45px 20px 30px;
+            background: linear-gradient(135deg, #f0faf7, #ffffff);
+            border-radius: 18px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .explorer-tag {
+            display: inline-block;
+            background: #e1f3ed;
+            color: #087F5B;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .explorer-hero h1 {
+            font-size: 38px;
+            margin: 0 0 12px;
+            color: #102B26;
+        }
+
+        .explorer-hero h1 span {
+            color: #087F5B;
+        }
+
+        .explorer-hero p {
+            max-width: 650px;
+            margin: auto;
+            color: #64748b;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        .explorer-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        @media (max-width: 850px) {
+            .explorer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .explorer-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        .explorer-card h2 {
+            font-size: 20px;
+            color: #102B26;
+            margin: 0 0 10px;
+        }
+
+        .explorer-card p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .explorer-select {
+            width: 100%;
+            padding: 13px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 15px;
+            margin-top: 15px;
+            outline: none;
+        }
+
+        .explorer-select:focus {
+            border-color: #087F5B;
+        }
+
+        .explorer-button {
+            margin-top: 18px;
+            padding: 12px 24px;
+            background: #087F5B;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .explorer-button:hover {
+            background: #065F46;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #eef9f5;
+            color: #087F5B;
+            display: none;
+            font-size: 13px;
+        }
+
+        .status-message.visible { display: block; }
+        .status-message.error { background: #fee2e2; color: #991b1b; }
+
+        /* RESULTS SECTION */
+        #pollutionResults {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .city-results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .city-results-header h2 {
+            font-size: 28px;
+            color: #102B26;
+            margin: 0 0 4px;
+        }
+
+        .action-links-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-pill-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .action-pill-btn:hover {
+            border-color: #087F5B;
+            color: #087F5B;
+        }
+
+        .action-pill-btn.primary {
+            background: #087F5B;
+            color: white;
+            border-color: #087F5B;
+        }
+
+        .action-pill-btn.primary:hover {
+            background: #065F46;
+        }
+
+        /* Weather & AQI Overview Grid */
+        .overview-cards-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 850px) {
+            .overview-cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .aqi-hero-card {
+            background: linear-gradient(135deg, #087F5B, #0a9d70);
+            color: white;
+            padding: 26px 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(8, 127, 91, 0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .aqi-hero-card .aqi-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .aqi-hero-card .aqi-val {
+            font-size: 54px;
+            font-weight: 800;
+            line-height: 1;
+            margin: 15px 0 6px;
+        }
+
+        .aqi-hero-card .aqi-cat {
+            font-size: 18px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.2);
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .weather-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 26px 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 15px;
+        }
+
+        .weather-icon {
+            font-size: 44px;
+        }
+
+        .weather-temp {
+            font-size: 38px;
+            font-weight: 800;
+            color: #1e293b;
+        }
+
+        .weather-cond {
+            font-size: 15px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .weather-details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .weather-details-grid div strong {
+            display: block;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        /* Health Advisory Box */
+        .health-advisory-panel {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 28px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            margin-bottom: 25px;
+        }
+
+        .health-advisory-panel h3 {
+            font-size: 19px;
+            color: #102B26;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .advisory-advice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .advisory-item-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .advisory-item-card h4 {
+            font-size: 14px;
+            color: #087F5B;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .advisory-item-card p {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Pollutant Cards */
+        .pollution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .pollution-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+
+        .pollution-card h4 {
+            color: #64748b;
+            font-size: 12px;
+            margin: 0 0 8px;
+            text-transform: uppercase;
+        }
+
+        .pollution-card .value {
+            color: #087F5B;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        /* Recent Records Table */
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            overflow-x: auto;
+        }
+
+        .table-container h3 {
+            font-size: 18px;
+            color: #102B26;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Unified Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/map">India Map</a>
+            <a href="/explorer" class="active">Explorer</a>
+            <a href="/discovery">AI Discovery</a>
+            <a href="/insights">Insights</a>
+            <a href="/compare">Compare</a>
+            <a href="/rankings">Rankings</a>
+        </nav>
+        <a href="/map" class="nav-button">View Live Map →</a>
+    </header>
+
+    <main class="explorer-container">
+
+        <section class="explorer-hero">
+            <span class="explorer-tag">ENVIRONMENTAL SENSOR & CLIMATE INTELLIGENCE</span>
+            <h1>City Pollution <span>Explorer.</span></h1>
+            <p>Inspect real-world air monitoring datasets, live meteorological parameters, and dynamic clinical health advisories across Indian cities.</p>
+        </section>
+
+        <div class="explorer-grid">
+
+            <div class="explorer-card">
+                <h2>Select Indian Monitoring Hub</h2>
+                <p>Choose an Indian city to retrieve its actual ambient air pollution records, real-time weather metrics, and tailored health advisories.</p>
+
+                <select class="explorer-select" id="citySelect">
+                    <option value="">Loading cities...</option>
+                </select>
+
+                <button class="explorer-button" type="button" id="exploreButton" onclick="exploreCity()">
+                    Explore City Records →
+                </button>
+
+                <div class="status-message" id="cityStatus"></div>
+            </div>
+
+            <div class="explorer-card">
+                <h2>Available Intelligence</h2>
+                <p>AirInsight AI synthesizes multiple data layers for your selected city:</p>
+                <ul style="list-style:none; padding:0; margin-top:14px; font-size:13px; color:#475569; line-height:2.2;">
+                    <li>✓ <strong>Live Weather:</strong> Temp, Humidity, Wind & Diurnal Cycle</li>
+                    <li>✓ <strong>CPCB National AQI:</strong> Calculated sub-indices & category bucket</li>
+                    <li>✓ <strong>Health Advisory:</strong> Specific precautions for sensitive groups & fitness</li>
+                    <li>✓ <strong>Report Generator:</strong> Printable PDF and raw CSV/JSON downloads</li>
+                    <li>✓ <strong>ML Clustering:</strong> Agglomerative & DBSCAN pattern discovery</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- ACTUAL POLLUTION RESULTS -->
+        <section id="pollutionResults">
+
+            <div class="city-results-header">
+                <div>
+                    <h2 id="resultCityHeading">City Overview</h2>
+                    <span id="resultSubheading" style="color:#64748b; font-size:14px;">Historical dataset records & live environmental synthesis</span>
+                </div>
+                <div class="action-links-row" id="cityActionLinks">
+                    <!-- Dynamic Action Buttons -->
+                </div>
+            </div>
+
+            <!-- AQI & Weather Overview Grid -->
+            <div class="overview-cards-grid">
+
+                <div class="aqi-hero-card" id="aqiCardBackground">
+                    <div class="aqi-top">
+                        <span style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Air Quality Index (AQI)</span>
+                        <span id="aqiDateBadge" style="font-size:12px; opacity:0.9;">Date: --</span>
+                    </div>
+                    <div>
+                        <div class="aqi-val" id="aqiValText">--</div>
+                        <div class="aqi-cat" id="aqiCatText">Category</div>
+                    </div>
+                    <div style="font-size:13px; margin-top:12px; opacity:0.95;" id="aqiRecordsCount">
+                        Total Historical Observations: --
+                    </div>
+                </div>
+
+                <div class="weather-card">
+                    <div class="weather-header">
+                        <span style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase;">Live Meteorological Data</span>
+                        <span id="weatherSourceBadge" style="font-size:11px; background:#e2f4eb; color:#087F5B; padding:3px 8px; border-radius:12px; font-weight:700;">● Source Active</span>
+                    </div>
+                    <div class="weather-main">
+                        <span class="weather-icon" id="weatherIcon">☀️</span>
+                        <div>
+                            <div class="weather-temp" id="weatherTemp">--°C</div>
+                            <div class="weather-cond" id="weatherCondition">Clear Sky</div>
+                        </div>
+                    </div>
+                    <div class="weather-details-grid">
+                        <div>Humidity: <strong id="weatherHumidity">--%</strong></div>
+                        <div>Wind Speed: <strong id="weatherWind">-- km/h</strong></div>
+                        <div>Feels Like: <strong id="weatherFeelsLike">--°C</strong></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Health & Safety Advisory Panel -->
+            <div class="health-advisory-panel">
+                <h3><span>🏥</span> Clinical Health & Safety Advisory</h3>
+                <p id="advisoryGeneralSummary" style="font-size:15px; color:#1e293b; line-height:1.6; margin:0;"></p>
+
+                <div class="advisory-advice-grid">
+                    <div class="advisory-item-card">
+                        <h4>👥 General Public</h4>
+                        <p id="advGenText">--</p>
+                    </div>
+                    <div class="advisory-item-card">
+                        <h4>⚠️ Sensitive & High-Risk Groups</h4>
+                        <p id="advSensText">--</p>
+                    </div>
+                    <div class="advisory-item-card">
+                        <h4>🏃 Outdoor Workouts & Exercise</h4>
+                        <p id="advWorkText">--</p>
+                    </div>
+                    <div class="advisory-item-card">
+                        <h4>😷 Mask & Air Purifier Guidance</h4>
+                        <p id="advMaskText">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pollutant Grid -->
+            <h3 style="font-size:18px; color:#102B26; margin: 25px 0 15px;">Key Pollutants Breakdown</h3>
+            <div class="pollution-grid" id="pollutionCardsGrid"></div>
+
+            <!-- Recent Records Table -->
+            <div class="table-container">
+                <h3>Recent Air Monitoring Observations (Newest First)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>AQI</th>
+                            <th>Status Bucket</th>
+                            <th>PM2.5 (µg/m³)</th>
+                            <th>PM10 (µg/m³)</th>
+                            <th>NO2 (µg/m³)</th>
+                            <th>SO2 (µg/m³)</th>
+                            <th>CO (mg/m³)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTableBody"></tbody>
+                </table>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <div class="logo">✦ AirInsight <span>AI</span></div>
+        <p>Unsupervised Machine Learning & Environmental Pattern Intelligence for India.</p>
+    </footer>
+
+    <script>
+        const citySelect = document.getElementById("citySelect");
+        const cityStatus = document.getElementById("cityStatus");
+        const exploreButton = document.getElementById("exploreButton");
+
+        async function loadCities() {
+            try {
+                const res = await fetch("/api/cities");
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                citySelect.innerHTML = '<option value="">Choose an Indian city...</option>';
+                data.cities.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c;
+                    opt.textContent = c;
+                    citySelect.appendChild(opt);
+                });
+
+                // Auto-select city from URL param if present (e.g. ?city=Delhi)
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryCity = urlParams.get('city');
+                if (queryCity && data.cities.includes(queryCity)) {
+                    citySelect.value = queryCity;
+                    exploreCity();
+                } else if (data.cities.length > 0) {
+                    citySelect.value = "Delhi";
+                    exploreCity();
+                }
+            } catch (err) {
+                showStatus(err.message, true);
+            }
+        }
+
+        function showStatus(msg, isError = false) {
+            cityStatus.textContent = msg;
+            cityStatus.className = 'status-message visible ' + (isError ? 'error' : '');
+        }
+
+        async function exploreCity() {
+            const city = citySelect.value;
+            if (!city) {
+                showStatus("Please select a city first.", true);
+                return;
+            }
+
+            exploreButton.disabled = true;
+            exploreButton.textContent = "Loading City Intelligence...";
+            showStatus(`Fetching records and real-time parameters for ${city}...`);
+
+            try {
+                const res = await fetch(`/api/city/${encodeURIComponent(city)}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                const latest = data.latest_record || {};
+                const weather = data.weather || {};
+                const advisory = data.advisory || {};
+
+                // Update Heading
+                document.getElementById("resultCityHeading").textContent = `${city} Environmental Profile`;
+                document.getElementById("resultSubheading").textContent = `${weather.state || 'India'} • ${weather.region || ''} India`;
+
+                // Update Actions
+                document.getElementById("cityActionLinks").innerHTML = `
+                    <a href="/report/${encodeURIComponent(city)}" class="action-pill-btn primary">🖨️ Generate Official Report</a>
+                    <a href="/api/export/csv/${encodeURIComponent(city)}" class="action-pill-btn" download>📥 Export CSV</a>
+                    <a href="/compare?cities=${encodeURIComponent(city)},Mumbai" class="action-pill-btn">⚖️ Compare</a>
+                    <a href="/discovery" class="action-pill-btn">🤖 Run ML Clustering</a>
+                `;
+
+                // AQI Card
+                const aqiVal = latest.AQI || weather.aqi || 100;
+                const bucket = latest.AQI_Bucket || advisory.bucket || 'Moderate';
+                document.getElementById("aqiValText").textContent = aqiVal;
+                document.getElementById("aqiCatText").textContent = bucket;
+                document.getElementById("aqiDateBadge").textContent = `Observed: ${latest.Date || 'Latest'}`;
+                document.getElementById("aqiRecordsCount").textContent = `Total Historical Records: ${data.total_records} Days`;
+
+                // Dynamic background color based on AQI
+                const card = document.getElementById("aqiCardBackground");
+                card.style.background = `linear-gradient(135deg, ${advisory.color || '#087F5B'}, #065F46)`;
+
+                // Weather Info
+                if (weather.weather) {
+                    document.getElementById("weatherTemp").textContent = `${weather.weather.temperature}°C`;
+                    document.getElementById("weatherCondition").textContent = weather.weather.condition;
+                    document.getElementById("weatherIcon").textContent = weather.weather.icon;
+                    document.getElementById("weatherHumidity").textContent = `${weather.weather.humidity}%`;
+                    document.getElementById("weatherWind").textContent = `${weather.weather.wind_speed} km/h`;
+                    document.getElementById("weatherFeelsLike").textContent = `${weather.weather.feels_like}°C`;
+                    document.getElementById("weatherSourceBadge").textContent = weather.is_live ? "● Live Station API" : "● Dataset Station Model";
+                }
+
+                // Health Advisory
+                document.getElementById("advisoryGeneralSummary").innerHTML = `<strong>Health Status (${advisory.risk_level} Risk):</strong> ${advisory.summary}`;
+                document.getElementById("advGenText").textContent = advisory.general_public;
+                document.getElementById("advSensText").textContent = advisory.sensitive_groups;
+                document.getElementById("advWorkText").textContent = advisory.outdoor_exercise;
+                document.getElementById("advMaskText").textContent = `${advisory.mask_recommendation} ${advisory.air_purifier}`;
+
+                // Pollutant Cards
+                renderPollutantCards(latest);
+
+                // Records Table
+                renderRecordsTable(data.recent_records);
+
+                document.getElementById("pollutionResults").style.display = "block";
+                showStatus(`Data successfully loaded for ${city}!`);
+
+            } catch (err) {
+                showStatus(err.message, true);
+                document.getElementById("pollutionResults").style.display = "none";
+            } finally {
+                exploreButton.disabled = false;
+                exploreButton.textContent = "Explore City Records →";
+            }
+        }
+
+        function renderPollutantCards(rec) {
+            const grid = document.getElementById("pollutionCardsGrid");
+            grid.innerHTML = '';
+            const list = [
+                { name: "PM2.5", key: "PM2.5", unit: "µg/m³" },
+                { name: "PM10", key: "PM10", unit: "µg/m³" },
+                { name: "NO2", key: "NO2", unit: "µg/m³" },
+                { name: "SO2", key: "SO2", unit: "µg/m³" },
+                { name: "CO", key: "CO", unit: "mg/m³" },
+                { name: "Ozone (O3)", key: "O3", unit: "µg/m³" },
+                { name: "Benzene", key: "Benzene", unit: "µg/m³" },
+                { name: "NO", key: "NO", unit: "µg/m³" }
+            ];
+
+            list.forEach(p => {
+                const val = rec[p.key] !== null && rec[p.key] !== undefined ? Number(rec[p.key]).toFixed(1) : "N/A";
+                const c = document.createElement("div");
+                c.className = "pollution-card";
+                c.innerHTML = `<h4>${p.name}</h4><div class="value">${val}</div><span style="font-size:11px; color:#94a3b8;">${p.unit}</span>`;
+                grid.appendChild(c);
+            });
+        }
+
+        function renderRecordsTable(records) {
+            const tbody = document.getElementById("recordsTableBody");
+            tbody.innerHTML = '';
+            if (!records || !records.length) {
+                tbody.innerHTML = '<tr><td colspan="8">No records available.</td></tr>';
+                return;
+            }
+
+            records.slice(0, 15).forEach(r => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td><strong>${r.Date || 'N/A'}</strong></td>
+                    <td style="font-weight:700; color:#087F5B;">${r.AQI ?? 'N/A'}</td>
+                    <td>${r.AQI_Bucket ?? 'N/A'}</td>
+                    <td>${r['PM2.5'] !== null ? Number(r['PM2.5']).toFixed(1) : 'N/A'}</td>
+                    <td>${r.PM10 !== null ? Number(r.PM10).toFixed(1) : 'N/A'}</td>
+                    <td>${r.NO2 !== null ? Number(r.NO2).toFixed(1) : 'N/A'}</td>
+                    <td>${r.SO2 !== null ? Number(r.SO2).toFixed(1) : 'N/A'}</td>
+                    <td>${r.CO !== null ? Number(r.CO).toFixed(2) : 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadCities);
+    </script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Quality & Machine Learning Report - {{ city }} | AirInsight AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <style>
+        .report-page-container {
+            max-width: 1050px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        .report-actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 18px 24px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .report-actions-bar .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .btn-print {
+            background: #087F5B;
+            color: white;
+        }
+        .btn-print:hover { background: #065F46; }
+
+        .btn-csv {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-csv:hover { background: #e2e8f0; }
+
+        .btn-json {
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        /* Report Document Container */
+        .report-paper {
+            background: white;
+            padding: 50px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+            margin-bottom: 50px;
+        }
+
+        .report-doc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #087F5B;
+            padding-bottom: 25px;
+            margin-bottom: 30px;
+        }
+
+        .report-doc-header .doc-title h1 {
+            font-size: 32px;
+            color: #102B26;
+            margin-bottom: 4px;
+        }
+
+        .report-doc-header .doc-title p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .report-badge-box {
+            text-align: right;
+        }
+
+        .report-badge-box .meta-pill {
+            display: inline-block;
+            background: #e1f3ed;
+            color: #087F5B;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .section-title {
+            font-size: 19px;
+            color: #087F5B;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin: 30px 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .kpi-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .kpi-card .kpi-val {
+            font-size: 26px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-top: 4px;
+        }
+
+        .advisory-box {
+            background: #f8fafc;
+            border-left: 4px solid #087F5B;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .advisory-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 15px;
+        }
+
+        .advisory-col {
+            background: white;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .advisory-col h4 {
+            font-size: 14px;
+            color: #087F5B;
+            margin-bottom: 6px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .report-table th {
+            text-align: left;
+            background: #f1f5f9;
+            padding: 10px;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .report-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #475569;
+        }
+
+        .report-footer-note {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 12px;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* PRINT STYLES */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .navbar, .footer, .report-actions-bar {
+                display: none !important;
+            }
+            .report-paper {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .report-page-container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Unified Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/map">India Map</a>
+            <a href="/explorer">Explorer</a>
+            <a href="/discovery">AI Discovery</a>
+            <a href="/insights">Insights</a>
+            <a href="/compare">Compare</a>
+            <a href="/rankings">Rankings</a>
+        </nav>
+        <a href="/explorer" class="nav-button">Explore City →</a>
+    </header>
+
+    <main class="report-page-container">
+
+        <!-- Action Bar (Hidden on print) -->
+        <div class="report-actions-bar">
+            <div>
+                <strong>City Report: {{ city }}</strong>
+                <span style="color:#64748b; font-size:13px; margin-left:8px;">Ready for download or printable PDF</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn-action btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+                <a href="/api/export/csv/{{ city }}" class="btn-action btn-csv" download>📥 Download CSV</a>
+                <a href="/api/export/json/{{ city }}" class="btn-action btn-json" download>📄 Export JSON</a>
+            </div>
+        </div>
+
+        <!-- The Report Document -->
+        <article class="report-paper">
+
+            <div class="report-doc-header">
+                <div class="doc-title">
+                    <span style="font-size:12px; font-weight:800; color:#087F5B; letter-spacing:1px; text-transform:uppercase;">AirInsight AI • Official Environmental Report</span>
+                    <h1 id="repCityName">{{ city }} Pollution & Pattern Analysis</h1>
+                    <p id="repSubtitle">Comprehensive Environmental Assessment & Machine Learning Clustering Report</p>
+                </div>
+                <div class="report-badge-box">
+                    <div class="meta-pill" id="repStateBadge">--</div>
+                    <div style="font-size:12px; color:#64748b;" id="repGeneratedAt">Generated: --</div>
+                </div>
+            </div>
+
+            <!-- Executive Summary & Key KPIs -->
+            <h2 class="section-title">1. Executive Summary & Core Metrics</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Historical Mean AQI</div>
+                    <div class="kpi-val" id="kpiMeanAqi">--</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Latest Recorded AQI</div>
+                    <div class="kpi-val" id="kpiLatestAqi">--</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Average PM2.5</div>
+                    <div class="kpi-val" id="kpiAvgPm25">--</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Observations</div>
+                    <div class="kpi-val" id="kpiTotalRecords">--</div>
+                </div>
+            </div>
+
+            <!-- Health & Safety Advisory -->
+            <h2 class="section-title">2. Health & Safety Recommendations</h2>
+            <div class="advisory-box" id="advisoryContainer">
+                <p id="advisorySummary">Loading clinical advisory...</p>
+                <div class="advisory-grid">
+                    <div class="advisory-col">
+                        <h4>General Population</h4>
+                        <p id="advGeneral">--</p>
+                    </div>
+                    <div class="advisory-col">
+                        <h4>Sensitive & High-Risk Groups</h4>
+                        <p id="advSensitive">--</p>
+                    </div>
+                    <div class="advisory-col">
+                        <h4>Outdoor Activity & Fitness</h4>
+                        <p id="advWorkout">--</p>
+                    </div>
+                    <div class="advisory-col">
+                        <h4>Mask & Air Purifier Guidance</h4>
+                        <p id="advPurifier">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Pollutants Table -->
+            <h2 class="section-title">3. Pollutant Concentration Profile</h2>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Pollutant</th>
+                        <th>Standard Safe Limit</th>
+                        <th>City Mean</th>
+                        <th>Median</th>
+                        <th>Max Recorded</th>
+                        <th>Health Impact Concern</th>
+                    </tr>
+                </thead>
+                <tbody id="pollutantTableBody"></tbody>
+            </table>
+
+            <!-- Seasonal & Trend Analysis -->
+            <h2 class="section-title">4. Seasonal Pollution Dynamics</h2>
+            <p id="seasonalInsightText" style="font-size:14px; color:#475569; margin-bottom:15px; line-height:1.6;"></p>
+            <div id="seasonalityChart" style="height: 320px; margin-bottom: 20px;"></div>
+
+            <!-- ML Discovery Findings -->
+            <h2 class="section-title">5. Unsupervised Machine Learning Findings</h2>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; font-size:14px; line-height:1.7;">
+                <p><strong>Clustering Methodology:</strong> Agglomerative Hierarchical Clustering (Ward's minimum variance linkage) and DBSCAN (Density-Based Spatial Clustering of Applications with Noise) were applied to standardized pollution features.</p>
+                <p style="margin-top:8px;" id="mlReportSummary">Loading ML profile data...</p>
+            </div>
+
+            <div class="report-footer-note">
+                <span>AirInsight AI • Unsupervised Machine Learning Environmental Intelligence System</span>
+                <span>Dataset: CPCB National Ambient Air Quality Records</span>
+            </div>
+
+        </article>
+
+    </main>
+
+    <footer class="footer">
+        <h3>✦ AirInsight AI</h3>
+        <p>Unsupervised Machine Learning & Environmental Pattern Intelligence for India.</p>
+    </footer>
+
+    <script>
+        const currentCity = {{ city | tojson }};
+
+        async function loadReportData() {
+            try {
+                const res = await fetch(`/api/export/json/${encodeURIComponent(currentCity)}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                document.getElementById('repGeneratedAt').textContent = "Generated: " + (data.exported_at || new Date().toLocaleString());
+                document.getElementById('repStateBadge').textContent = `${data.state} • ${data.region} India`;
+
+                // KPIs
+                const stats = data.summary_stats;
+                document.getElementById('kpiMeanAqi').textContent = stats.mean_aqi || 'N/A';
+                document.getElementById('kpiLatestAqi').textContent = data.latest_record.aqi || 'N/A';
+                document.getElementById('kpiAvgPm25').textContent = (stats.mean_pm25 || 'N/A') + ' µg/m³';
+                document.getElementById('kpiTotalRecords').textContent = stats.total_records + ' Days';
+
+                // Advisory
+                const adv = data.advisory;
+                document.getElementById('advisorySummary').innerHTML = `<strong>Category: ${adv.bucket} (AQI ${adv.aqi})</strong> — ${adv.summary}`;
+                document.getElementById('advGeneral').textContent = adv.general_public;
+                document.getElementById('advSensitive').textContent = adv.sensitive_groups;
+                document.getElementById('advWorkout').textContent = adv.outdoor_exercise;
+                document.getElementById('advPurifier').textContent = `${adv.mask_recommendation} ${adv.air_purifier}`;
+
+                // Pollutant Table
+                const pTable = document.getElementById('pollutantTableBody');
+                pTable.innerHTML = `
+                    <tr><td><strong>PM2.5</strong></td><td>60.0 µg/m³</td><td><strong>${stats.mean_pm25 || 'N/A'}</strong></td><td>${stats.mean_pm25 || 'N/A'}</td><td>--</td><td>Penetrates deep into alveolar lung tissue and circulation.</td></tr>
+                    <tr><td><strong>PM10</strong></td><td>100.0 µg/m³</td><td><strong>${stats.mean_pm10 || 'N/A'}</strong></td><td>${stats.mean_pm10 || 'N/A'}</td><td>--</td><td>Causes upper airway irritation and conjunctival inflammation.</td></tr>
+                    <tr><td><strong>NO2</strong></td><td>80.0 µg/m³</td><td><strong>${stats.mean_no2 || 'N/A'}</strong></td><td>${stats.mean_no2 || 'N/A'}</td><td>--</td><td>Combustion by-product; aggravates asthma and bronchial reactivity.</td></tr>
+                    <tr><td><strong>SO2</strong></td><td>80.0 µg/m³</td><td><strong>${stats.mean_so2 || 'N/A'}</strong></td><td>${stats.mean_so2 || 'N/A'}</td><td>--</td><td>Industrial precursor; causes bronchospasm and acid aerosol.</td></tr>
+                    <tr><td><strong>CO</strong></td><td>2.0 mg/m³</td><td><strong>${stats.mean_co || 'N/A'}</strong></td><td>${stats.mean_co || 'N/A'}</td><td>--</td><td>Reduces oxygen delivery to vital organs via carboxyhemoglobin.</td></tr>
+                `;
+
+                // Seasonality Chart
+                const trends = data.trends;
+                if (trends && trends.monthly_seasonality) {
+                    const months = trends.monthly_seasonality.map(m => m.month);
+                    const aqis = trends.monthly_seasonality.map(m => m.aqi);
+                    const pm25s = trends.monthly_seasonality.map(m => m.pm25);
+
+                    Plotly.newPlot('seasonalityChart', [
+                        { x: months, y: aqis, name: 'Average AQI', type: 'scatter', mode: 'lines+markers', line: { color: '#087F5B', width: 3 } },
+                        { x: months, y: pm25s, name: 'PM2.5 (µg/m³)', type: 'bar', marker: { color: 'rgba(8, 127, 91, 0.25)' } }
+                    ], {
+                        margin: { t: 20, r: 20, l: 40, b: 35 },
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)',
+                        legend: { orientation: 'h', y: 1.15 }
+                    }, { responsive: true });
+
+                    const insights = trends.insights;
+                    document.getElementById('seasonalInsightText').textContent = 
+                        `Historical seasonal dynamics indicate a stark disparity between winter and monsoon periods. Winter months (Nov-Jan) average an AQI of ${insights.winter_avg_aqi || 'N/A'}, while monsoon months (Jul-Sep) average ${insights.monsoon_avg_aqi || 'N/A'}, reflecting a seasonal swing of ${insights.seasonal_contrast || 'N/A'} AQI points. Peak pollution typically occurs in ${insights.peak_pollution_month}.`;
+                }
+
+                // ML Summary
+                document.getElementById('mlReportSummary').innerHTML = 
+                    `Unsupervised pattern analysis for ${currentCity} groups the ${stats.total_records} daily multi-pollutant observations into distinct clusters representing background days, moderate industrial transport days, and high-concentration winter temperature inversion events. Principal Component Analysis (PCA) successfully reduces dimensionality while preserving maximum variance.`;
+
+            } catch (err) {
+                console.error("Report loading error:", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadReportData);
+    </script>
+</body>
+</html>

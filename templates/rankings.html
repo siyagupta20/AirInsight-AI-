@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Air Quality Rankings | AirInsight AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <style>
+        .rankings-container {
+            max-width: 1350px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        .rankings-header {
+            margin-bottom: 30px;
+        }
+
+        .rankings-header h1 {
+            font-size: 36px;
+            color: #102B26;
+            margin-bottom: 8px;
+        }
+
+        .rankings-header p {
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        /* Podium Sections */
+        .podiums-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        @media (max-width: 850px) {
+            .podiums-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .podium-card {
+            background: white;
+            border-radius: 16px;
+            padding: 26px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.03);
+        }
+
+        .podium-card.cleanest {
+            border-top: 5px solid #10b981;
+        }
+
+        .podium-card.polluted {
+            border-top: 5px solid #ef4444;
+        }
+
+        .podium-card h2 {
+            font-size: 20px;
+            color: #1e293b;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .podium-stand {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            height: 200px;
+        }
+
+        .podium-column {
+            flex: 1;
+            text-align: center;
+            border-radius: 12px 12px 0 0;
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .podium-column:hover {
+            transform: translateY(-4px);
+        }
+
+        .podium-column.gold {
+            height: 180px;
+            background: linear-gradient(180deg, #fef08a, #fef9c3);
+            border: 1px solid #fde047;
+        }
+
+        .podium-column.silver {
+            height: 145px;
+            background: linear-gradient(180deg, #e2e8f0, #f1f5f9);
+            border: 1px solid #cbd5e1;
+        }
+
+        .podium-column.bronze {
+            height: 120px;
+            background: linear-gradient(180deg, #ffedd5, #fff7ed);
+            border: 1px solid #fed7aa;
+        }
+
+        .podium-column.danger-1 {
+            height: 180px;
+            background: linear-gradient(180deg, #fee2e2, #fef2f2);
+            border: 1px solid #fca5a5;
+        }
+
+        .podium-column.danger-2 {
+            height: 145px;
+            background: linear-gradient(180deg, #ffedd5, #fff7ed);
+            border: 1px solid #fed7aa;
+        }
+
+        .podium-column.danger-3 {
+            height: 120px;
+            background: linear-gradient(180deg, #fef9c3, #fefce8);
+            border: 1px solid #fde047;
+        }
+
+        .podium-badge {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+
+        .podium-city {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .podium-aqi {
+            font-size: 13px;
+            font-weight: 700;
+            color: #475569;
+            margin-top: 4px;
+        }
+
+        /* Tables & Regional Section */
+        .two-tables-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        @media (max-width: 900px) {
+            .two-tables-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .table-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.03);
+            overflow-x: auto;
+        }
+
+        .table-panel h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #1e293b;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .leaderboard-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 700;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .leaderboard-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+
+        .rank-pill {
+            display: inline-block;
+            width: 26px;
+            height: 26px;
+            line-height: 26px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .rank-pill.green { background: #dcfce7; color: #166534; }
+        .rank-pill.red { background: #fee2e2; color: #991b1b; }
+
+        .search-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .search-box {
+            padding: 9px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 14px;
+            width: 250px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Unified Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/map">India Map</a>
+            <a href="/explorer">Explorer</a>
+            <a href="/discovery">AI Discovery</a>
+            <a href="/insights">Insights</a>
+            <a href="/compare">Compare</a>
+            <a href="/rankings" class="active">Rankings</a>
+        </nav>
+        <a href="/explorer" class="nav-button">Explore City →</a>
+    </header>
+
+    <main class="rankings-container">
+
+        <div class="rankings-header">
+            <h1>National Air Quality Leaderboard & Rankings</h1>
+            <p>Comprehensive comparative analysis ranking Indian cities from cleanest to most polluted based on historical monitoring records.</p>
+        </div>
+
+        <!-- Podiums Row -->
+        <div class="podiums-grid">
+
+            <!-- Cleanest Podium -->
+            <div class="podium-card cleanest">
+                <h2>🌿 Top 3 Cleanest Cities in India</h2>
+                <div class="podium-stand" id="cleanPodium">
+                    <!-- Dynamic Podium -->
+                </div>
+            </div>
+
+            <!-- Most Polluted Podium -->
+            <div class="podium-card polluted">
+                <h2>⚠️ Top 3 Most Polluted Cities in India</h2>
+                <div class="podium-stand" id="pollutedPodium">
+                    <!-- Dynamic Podium -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Top 10 Cleanest vs Top 10 Polluted Tables -->
+        <div class="two-tables-row">
+
+            <div class="table-panel">
+                <h3 style="color:#087F5B;">🌿 Top 10 Cleanest Cities</h3>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Mean AQI</th>
+                            <th>Clean Days</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topCleanTable"></tbody>
+                </table>
+            </div>
+
+            <div class="table-panel">
+                <h3 style="color:#ef4444;">🚨 Top 10 Most Polluted Cities</h3>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Mean AQI</th>
+                            <th>Peak AQI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topPollutedTable"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- Regional Comparison Chart -->
+        <div class="table-panel" style="margin-bottom: 35px;">
+            <h3>Regional Pollution Disparity (Geographical Averages)</h3>
+            <div id="regionalChart" style="height: 300px;"></div>
+        </div>
+
+        <!-- Complete Master Table -->
+        <div class="table-panel">
+            <div class="search-row">
+                <h3>All 26 Monitored Indian Cities (Master Table)</h3>
+                <input type="text" class="search-box" id="masterSearch" placeholder="Search city or state..." oninput="filterMasterTable(this.value)">
+            </div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Region</th>
+                        <th>Mean AQI</th>
+                        <th>Status</th>
+                        <th>PM2.5 (µg/m³)</th>
+                        <th>PM10 (µg/m³)</th>
+                        <th>NO2 (µg/m³)</th>
+                        <th>Good Days %</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="masterTableBody"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <h3>✦ AirInsight AI</h3>
+        <p>Unsupervised Machine Learning & Environmental Pattern Intelligence for India.</p>
+    </footer>
+
+    <script>
+        let allRankings = [];
+
+        async function loadRankings() {
+            try {
+                const res = await fetch('/api/rankings');
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                allRankings = data.all_rankings;
+
+                renderCleanPodium(data.cleanest);
+                renderPollutedPodium(data.most_polluted);
+                renderTopCleanTable(data.cleanest);
+                renderTopPollutedTable(data.most_polluted);
+                renderRegionalChart(data.regional_summary);
+                renderMasterTable(allRankings);
+            } catch (err) {
+                console.error("Rankings load error:", err);
+            }
+        }
+
+        function renderCleanPodium(cleanList) {
+            if (cleanList.length < 3) return;
+            const c1 = cleanList[0];
+            const c2 = cleanList[1];
+            const c3 = cleanList[2];
+
+            document.getElementById('cleanPodium').innerHTML = `
+                <div class="podium-column silver">
+                    <div class="podium-badge">🥈</div>
+                    <div class="podium-city">${c2.city}</div>
+                    <div class="podium-aqi">${c2.mean_aqi} AQI</div>
+                </div>
+                <div class="podium-column gold">
+                    <div class="podium-badge">🥇</div>
+                    <div class="podium-city">${c1.city}</div>
+                    <div class="podium-aqi">${c1.mean_aqi} AQI</div>
+                </div>
+                <div class="podium-column bronze">
+                    <div class="podium-badge">🥉</div>
+                    <div class="podium-city">${c3.city}</div>
+                    <div class="podium-aqi">${c3.mean_aqi} AQI</div>
+                </div>
+            `;
+        }
+
+        function renderPollutedPodium(pollutedList) {
+            if (pollutedList.length < 3) return;
+            const p1 = pollutedList[0];
+            const p2 = pollutedList[1];
+            const p3 = pollutedList[2];
+
+            document.getElementById('pollutedPodium').innerHTML = `
+                <div class="podium-column danger-2">
+                    <div class="podium-badge">⚠️ #2</div>
+                    <div class="podium-city">${p2.city}</div>
+                    <div class="podium-aqi">${p2.mean_aqi} AQI</div>
+                </div>
+                <div class="podium-column danger-1">
+                    <div class="podium-badge">🚨 #1</div>
+                    <div class="podium-city">${p1.city}</div>
+                    <div class="podium-aqi">${p1.mean_aqi} AQI</div>
+                </div>
+                <div class="podium-column danger-3">
+                    <div class="podium-badge">⚠️ #3</div>
+                    <div class="podium-city">${p3.city}</div>
+                    <div class="podium-aqi">${p3.mean_aqi} AQI</div>
+                </div>
+            `;
+        }
+
+        function renderTopCleanTable(list) {
+            const tbody = document.getElementById('topCleanTable');
+            tbody.innerHTML = list.map((c, i) => `
+                <tr>
+                    <td><span class="rank-pill green">#${i+1}</span></td>
+                    <td><strong>${c.city}</strong></td>
+                    <td>${c.state}</td>
+                    <td style="color:#087F5B; font-weight:700;">${c.mean_aqi}</td>
+                    <td>${c.good_days_pct}%</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTopPollutedTable(list) {
+            const tbody = document.getElementById('topPollutedTable');
+            tbody.innerHTML = list.map((p, i) => `
+                <tr>
+                    <td><span class="rank-pill red">#${i+1}</span></td>
+                    <td><strong>${p.city}</strong></td>
+                    <td>${p.state}</td>
+                    <td style="color:#ef4444; font-weight:700;">${p.mean_aqi}</td>
+                    <td style="color:#991b1b; font-weight:700;">${p.max_aqi}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderRegionalChart(regional) {
+            Plotly.newPlot('regionalChart', [{
+                x: regional.map(r => r.region + ' India (' + r.city_count + ' cities)'),
+                y: regional.map(r => r.avg_aqi),
+                type: 'bar',
+                marker: {
+                    color: regional.map(r => r.avg_aqi > 150 ? '#ef4444' : r.avg_aqi > 100 ? '#f97316' : '#10b981')
+                }
+            }], {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                yaxis: { title: 'Average Regional AQI' },
+                margin: { t: 20, r: 20, l: 50, b: 40 }
+            }, { responsive: true });
+        }
+
+        function renderMasterTable(list) {
+            const tbody = document.getElementById('masterTableBody');
+            tbody.innerHTML = list.map(item => `
+                <tr>
+                    <td><strong>${item.city}</strong></td>
+                    <td>${item.state}</td>
+                    <td>${item.region}</td>
+                    <td style="font-weight:700; color:${item.color};">${item.mean_aqi}</td>
+                    <td><span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:12px; font-weight:600; color:white; background:${item.color};">${item.bucket}</span></td>
+                    <td>${item.mean_pm25 ?? 'N/A'}</td>
+                    <td>${item.mean_pm10 ?? 'N/A'}</td>
+                    <td>${item.mean_no2 ?? 'N/A'}</td>
+                    <td>${item.good_days_pct}%</td>
+                    <td><a href="/explorer?city=${encodeURIComponent(item.city)}" style="color:#087F5B; font-weight:600;">Explore →</a></td>
+                </tr>
+            `).join('');
+        }
+
+        function filterMasterTable(query) {
+            const q = query.toLowerCase().trim();
+            const filtered = allRankings.filter(c => 
+                c.city.toLowerCase().includes(q) || c.state.toLowerCase().includes(q) || c.region.toLowerCase().includes(q)
+            );
+            renderMasterTable(filtered);
+        }
+
+        document.addEventListener('DOMContentLoaded', loadRankings);
+    </script>
+</body>
+</html>

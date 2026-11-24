@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive India Pollution & State Choropleth Map | AirInsight AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            background: #ffffff;
+        }
+
+        .map-layout-container {
+            max-width: 1500px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .map-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .map-top-bar h1 {
+            font-size: 26px;
+            color: #102B26;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .map-mode-toggles {
+            display: flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 30px;
+            border: 1px solid #cbd5e1;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            border: none;
+            background: transparent;
+            padding: 7px 16px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #475569;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: #087F5B;
+            color: white;
+            box-shadow: 0 2px 8px rgba(8, 127, 91, 0.2);
+        }
+
+        .search-box-wrap input {
+            padding: 8px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+            width: 240px;
+        }
+
+        .search-box-wrap input:focus {
+            border-color: #087F5B;
+        }
+
+        /* Two Column Layout */
+        .map-grid-split {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        @media (max-width: 1100px) {
+            .map-grid-split {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .map-viewport-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            overflow: hidden;
+            position: relative;
+            height: 750px;
+        }
+
+        /* Pure white map canvas, no external tiles */
+        #choroplethMap {
+            height: 100%;
+            width: 100%;
+            background: #ffffff !important;
+        }
+
+        /* Side Inspector Panel */
+        .inspector-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 750px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .inspector-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+        }
+
+        .inspector-header .tag {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #087F5B;
+            text-transform: uppercase;
+        }
+
+        .inspector-header h2 {
+            font-size: 22px;
+            color: #102B26;
+            margin: 4px 0 2px;
+        }
+
+        .inspector-header .location-sub {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .inspector-kpi-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .kpi-mini-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .kpi-mini-box .title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .kpi-mini-box .val {
+            font-size: 26px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        /* State Cities List (5+ cities shown on state click) */
+        .state-cities-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .state-cities-section h4 {
+            font-size: 13px;
+            color: #1e293b;
+            margin: 0 0 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cities-pill-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+        }
+
+        .city-selection-chip {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            color: #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .city-selection-chip:hover, .city-selection-chip.active {
+            border-color: #087F5B;
+            background: #f0fdf4;
+            color: #087F5B;
+        }
+
+        .city-selection-chip small {
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .pollutant-chips-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pol-chip {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            text-align: center;
+        }
+
+        .pol-chip span {
+            display: block;
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .pol-chip strong {
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .weather-mini-panel {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #14532d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .clinical-advisory-box {
+            background: #fefce8;
+            border-left: 4px solid #eab308;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #713f12;
+            margin-bottom: 16px;
+        }
+
+        .inspector-actions-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .btn-insp {
+            padding: 9px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            transition: 0.2s;
+            display: block;
+        }
+
+        .btn-insp.primary {
+            background: #087F5B;
+            color: white;
+        }
+        .btn-insp.primary:hover { background: #065F46; }
+
+        .btn-insp.secondary {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-insp.secondary:hover { background: #e2e8f0; }
+
+        /* Custom Map Legend Matching User Image */
+        .user-styled-legend {
+            background: white;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            line-height: 1.8;
+            color: #1e293b;
+            min-width: 175px;
+        }
+
+        .user-styled-legend .legend-title {
+            font-weight: 800;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #0f172a;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 14px;
+            border-radius: 2px;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        /* Station Marker Styling (Dark dots like user image) */
+        .station-dot {
+            background: #111827;
+            border: 1.5px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .station-dot:hover {
+            transform: scale(1.5);
+            background: #dc2626;
+        }
+
+        .station-dot.selected {
+            background: #dc2626 !important;
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.4);
+        }
+
+        /* Tooltip */
+        .state-tooltip {
+            background: rgba(15, 23, 42, 0.92);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Unified Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/map" class="active">India Map</a>
+            <a href="/explorer">Explorer</a>
+            <a href="/discovery">AI Discovery</a>
+            <a href="/insights">Insights</a>
+            <a href="/compare">Compare</a>
+            <a href="/rankings">Rankings</a>
+        </nav>
+        <a href="/explorer" class="nav-button">Explore City →</a>
+    </header>
+
+    <main class="map-layout-container">
+
+        <!-- Top Controls Bar -->
+        <div class="map-top-bar">
+            <h1><span>🇮🇳</span> India Air Quality & State Choropleth Map</h1>
+            <div class="controls-row">
+                <div class="search-box-wrap">
+                    <input type="text" id="cityStateSearch" placeholder="Search city or state (e.g. Ludhiana, Punjab)..." oninput="handleSearch(this.value)">
+                </div>
+                <div class="map-mode-toggles">
+                    <button class="mode-btn active" id="btnModePM25" onclick="setMetricMode('pm25')">
+                        PM 2.5 Average (µg/m³)
+                    </button>
+                    <button class="mode-btn" id="btnModeAQI" onclick="setMetricMode('aqi')">
+                        Air Quality Index (AQI)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Split Grid: Map + Side Data Inspector -->
+        <div class="map-grid-split">
+
+            <!-- Clean White Map Canvas -->
+            <div class="map-viewport-card">
+                <div id="choroplethMap"></div>
+            </div>
+
+            <!-- Interactive City & State Data Inspector -->
+            <aside class="inspector-card" id="inspectorCard">
+
+                <div>
+                    <div class="inspector-header">
+                        <span class="tag" id="inspTag">STATION INSPECTOR</span>
+                        <h2 id="inspCityName">Punjab</h2>
+                        <div class="location-sub" id="inspLocationSub">State Average • North India</div>
+                    </div>
+
+                    <div class="inspector-kpi-row">
+                        <div class="kpi-mini-box">
+                            <div class="title" id="kpiMetric1Title">PM2.5 Average</div>
+                            <div class="val" id="kpiMetric1Val" style="color:#fb923c;">55.5 µg/m³</div>
+                        </div>
+                        <div class="kpi-mini-box">
+                            <div class="title">Air Quality Index</div>
+                            <div class="val" id="kpiMetric2Val" style="color:#eab308;">120 (Moderate)</div>
+                        </div>
+                    </div>
+
+                    <!-- State Cities Grid (Shows at least 5-8 cities per state) -->
+                    <div class="state-cities-section">
+                        <h4>
+                            <span id="stateCitiesTitle">Cities Monitored in Punjab (7 Hubs)</span>
+                            <span style="font-size:11px; font-weight:normal; color:#64748b;">Click city to inspect</span>
+                        </h4>
+                        <div class="cities-pill-grid" id="stateCitiesPills">
+                            <!-- Dynamic city pills inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Pollutant Breakdown for Selected City -->
+                    <div class="inspector-header" style="padding-bottom:4px; margin-bottom:8px;">
+                        <span class="tag">POLLUTANT CONCENTRATIONS</span>
+                    </div>
+                    <div class="pollutant-chips-list" id="pollutantChips">
+                        <div class="pol-chip"><span>PM10</span><strong id="chipPM10">115.2</strong></div>
+                        <div class="pol-chip"><span>NO2</span><strong id="chipNO2">28.0</strong></div>
+                        <div class="pol-chip"><span>SO2</span><strong id="chipSO2">12.0</strong></div>
+                        <div class="pol-chip"><span>CO</span><strong id="chipCO">1.1 mg</strong></div>
+                        <div class="pol-chip"><span>O3</span><strong id="chipO3">34.0</strong></div>
+                        <div class="pol-chip"><span>Dominant</span><strong id="chipDom">PM2.5</strong></div>
+                    </div>
+
+                    <!-- Weather Panel -->
+                    <div class="weather-mini-panel" id="weatherMiniPanel">
+                        <div>
+                            <span id="inspWeatherIcon">🌤️</span>
+                            <strong id="inspWeatherTemp" style="margin-left:6px;">24.0°C</strong>
+                            <span id="inspWeatherCond" style="color:#166534; font-size:12px; margin-left:6px;">Partly Cloudy</span>
+                        </div>
+                        <div style="font-size:12px; color:#166534;">
+                            💧 <span id="inspHumidity">58%</span> | 💨 <span id="inspWind">12 km/h</span>
+                        </div>
+                    </div>
+
+                    <!-- Health Advisory -->
+                    <div class="clinical-advisory-box" id="inspAdvisoryBox">
+                        <strong id="inspAdvTitle">Health Advisory (Moderate AQI):</strong>
+                        <span id="inspAdvText">Breathing discomfort possible for sensitive individuals, children, and elderly. Limit prolonged strenuous outdoor exercise during evening hours.</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="inspector-actions-group">
+                    <a href="/report/Amritsar" id="inspBtnReport" class="btn-insp primary">🖨️ View Full Printable Report →</a>
+                    <a href="/explorer?city=Amritsar" id="inspBtnExplorer" class="btn-insp secondary">🔍 Deep-Dive City Explorer</a>
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <h3>✦ AirInsight AI</h3>
+        <p>Unsupervised Machine Learning & Environmental Pattern Intelligence for India.</p>
+    </footer>
+
+    <script>
+        let map;
+        let geojsonLayer;
+        let stationMarkersLayer;
+        let indiaGeoData = null;
+        let mapData = null;
+        let currentMode = 'pm25'; // 'pm25' or 'aqi'
+        let currentSelectedState = "Punjab";
+        let currentSelectedCity = "Amritsar";
+        let activeMarker = null;
+        let markerMap = {};
+
+        // Initialize Map
+        async function initChoroplethMap() {
+            // Leaflet map with pure white background and no external raster tile layer
+            map = L.map('choroplethMap', {
+                center: [22.8, 80.5],
+                zoom: 5,
+                minZoom: 4,
+                maxZoom: 10,
+                zoomControl: true,
+                attributionControl: false
+            });
+
+            stationMarkersLayer = L.layerGroup().addTo(map);
+
+            // Add Custom Map Legend matching user's image exactly
+            addCustomLegend();
+
+            // Fetch GeoJSON and Map Data in parallel
+            await Promise.all([loadGeoJSON(), fetchPollutionData()]);
+
+            renderChoropleth();
+            renderCityStationDots();
+
+            // Select Punjab as default
+            selectState("Punjab");
+        }
+
+        async function loadGeoJSON() {
+            try {
+                const res = await fetch('/static/data/india_states_simplified.geojson');
+                indiaGeoData = await res.json();
+            } catch (err) {
+                console.error("GeoJSON load error:", err);
+            }
+        }
+
+        async function fetchPollutionData() {
+            try {
+                const res = await fetch('/api/map-data');
+                mapData = await res.json();
+            } catch (err) {
+                console.error("Pollution data fetch error:", err);
+            }
+        }
+
+        // Color scale exactly matching user's reference image:
+        // < 10 : WHO Guideline (Bright Green)
+        // 10 - 40 : India NAAQS (Pale Yellow)
+        // 40 - 60 (Gold/Yellow)
+        // 60 - 90 (Orange)
+        // > 90 (Dark Red / Crimson)
+        function getPM25Color(val) {
+            if (val === null || val === undefined) return "#fef08a";
+            if (val < 10) return "#4ade80";    // < 10 : WHO Guideline
+            if (val <= 40) return "#fef08a";   // 10 - 40 : India NAAQS
+            if (val <= 60) return "#facc15";   // 40 - 60
+            if (val <= 90) return "#fb923c";   // 60 - 90
+            return "#dc2626";                  // > 90
+        }
+
+        function getAQIColor(val) {
+            if (val === null || val === undefined) return "#facc15";
+            if (val <= 50) return "#4ade80";
+            if (val <= 100) return "#a3e635";
+            if (val <= 200) return "#facc15";
+            if (val <= 300) return "#fb923c";
+            if (val <= 400) return "#ef4444";
+            return "#991b1b";
+        }
+
+        function getStatePollution(stateName) {
+            if (!mapData || !mapData.state_data) return null;
+            const key = stateName.trim().toLowerCase();
+            return mapData.state_data[key] || null;
+        }
+
+        function renderChoropleth() {
+            if (!indiaGeoData) return;
+            if (geojsonLayer) map.removeLayer(geojsonLayer);
+
+            geojsonLayer = L.geoJSON(indiaGeoData, {
+                style: function (feature) {
+                    const stateName = feature.properties.state || "";
+                    const stateInfo = getStatePollution(stateName);
+                    let fillColor;
+
+                    if (currentMode === 'pm25') {
+                        const pm25 = stateInfo ? stateInfo.avg_pm25 : 45.0;
+                        fillColor = getPM25Color(pm25);
+                    } else {
+                        const aqi = stateInfo ? stateInfo.avg_aqi : 120.0;
+                        fillColor = getAQIColor(aqi);
+                    }
+
+                    return {
+                        fillColor: fillColor,
+                        weight: 1.2,
+                        opacity: 1,
+                        color: '#334155',
+                        fillOpacity: 0.92
+                    };
+                },
+                onEachFeature: function (feature, layer) {
+                    const stateName = feature.properties.state || "State";
+                    const stateInfo = getStatePollution(stateName);
+                    const pm25Val = stateInfo ? (stateInfo.avg_pm25 ?? 'N/A') : 'N/A';
+                    const aqiVal = stateInfo ? (stateInfo.avg_aqi ?? 'N/A') : 'N/A';
+                    const cityCount = stateInfo && stateInfo.cities ? stateInfo.cities.length : 0;
+
+                    layer.bindTooltip(`
+                        <strong>${stateName}</strong><br/>
+                        ${currentMode === 'pm25' ? `PM2.5 Average: ${pm25Val} µg/m³` : `AQI Average: ${aqiVal}`}<br/>
+                        <span style="font-size:10px; color:#cbd5e1;">Click to view ${cityCount} monitored cities</span>
+                    `, { className: 'state-tooltip', sticky: true });
+
+                    layer.on({
+                        mouseover: function (e) {
+                            const l = e.target;
+                            l.setStyle({ weight: 2.8, color: '#0f172a', fillOpacity: 0.98 });
+                            l.bringToFront();
+                            if (stationMarkersLayer) stationMarkersLayer.bringToFront();
+                        },
+                        mouseout: function (e) {
+                            geojsonLayer.resetStyle(e.target);
+                        },
+                        click: function (e) {
+                            map.fitBounds(e.target.getBounds(), { padding: [25, 25] });
+                            selectState(stateName);
+                        }
+                    });
+                }
+            }).addTo(map);
+
+            // Fit map snugly to India with no wasted white border space
+            map.fitBounds(geojsonLayer.getBounds(), { padding: [10, 10] });
+        }
+
+        // Render City Station Dots on Top of Choropleth (Over 160+ Cities)
+        function renderCityStationDots() {
+            stationMarkersLayer.clearLayers();
+            markerMap = {};
+            if (!mapData || !mapData.cities) return;
+
+            mapData.cities.forEach(city => {
+                const marker = L.circleMarker([city.lat, city.lon], {
+                    radius: 5,
+                    fillColor: '#111827',
+                    color: '#ffffff',
+                    weight: 1.5,
+                    opacity: 1,
+                    fillOpacity: 0.95,
+                    className: 'station-dot'
+                });
+
+                marker.bindTooltip(`<strong>${city.city}</strong> (${city.state})<br>PM2.5: ${city.pm25} µg/m³ | AQI: ${city.latest_aqi}`, {
+                    direction: 'top',
+                    offset: [0, -5]
+                });
+
+                marker.on('click', function () {
+                    selectCity(city);
+                });
+
+                marker.addTo(stationMarkersLayer);
+                markerMap[city.city.toLowerCase()] = { marker: marker, city: city };
+            });
+        }
+
+        // When user clicks a State (e.g. Punjab)
+        function selectState(stateName) {
+            currentSelectedState = stateName;
+            const stateInfo = getStatePollution(stateName);
+
+            document.getElementById('inspTag').textContent = "STATE OVERVIEW";
+            document.getElementById('inspCityName').textContent = stateName;
+            document.getElementById('inspLocationSub').textContent = `Statewide Air Quality • India`;
+
+            const avgPm25 = stateInfo ? stateInfo.avg_pm25 : 50.0;
+            const avgAqi = stateInfo ? stateInfo.avg_aqi : 120.0;
+
+            document.getElementById('kpiMetric1Title').textContent = "State Mean PM2.5";
+            document.getElementById('kpiMetric1Val').textContent = `${avgPm25} µg/m³`;
+            document.getElementById('kpiMetric1Val').style.color = getPM25Color(avgPm25);
+
+            document.getElementById('kpiMetric2Val').textContent = `${avgAqi} AQI`;
+            document.getElementById('kpiMetric2Val').style.color = getAQIColor(avgAqi);
+
+            // Render Cities Pills for this state (at least 5-8 cities)
+            const citiesList = stateInfo ? stateInfo.cities_detail : [];
+            document.getElementById('stateCitiesTitle').textContent = `Cities Monitored in ${stateName} (${citiesList.length} Hubs)`;
+            
+            const pillsContainer = document.getElementById('stateCitiesPills');
+            pillsContainer.innerHTML = '';
+
+            citiesList.forEach((c, index) => {
+                const pill = document.createElement('div');
+                pill.className = `city-selection-chip ${index === 0 ? 'active' : ''}`;
+                pill.innerHTML = `
+                    <span>${c.city}</span>
+                    <small style="color:${getPM25Color(c.pm25)}; font-weight:700;">${c.pm25} µg</small>
+                `;
+                pill.onclick = function() {
+                    document.querySelectorAll('.city-selection-chip').forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    // Find city object
+                    const match = mapData.cities.find(item => item.city.toLowerCase() === c.city.toLowerCase());
+                    if (match) selectCity(match);
+                };
+                pillsContainer.appendChild(pill);
+            });
+
+            // Auto-select the first city of this state
+            if (citiesList.length > 0) {
+                const firstCityName = citiesList[0].city;
+                const match = mapData.cities.find(item => item.city.toLowerCase() === firstCityName.toLowerCase());
+                if (match) selectCity(match, false);
+            }
+        }
+
+        // When user clicks a specific City (e.g. Jalandhar, Phagwara, Amritsar, Ludhiana)
+        async function selectCity(city, updateStatePill = true) {
+            currentSelectedCity = city.city;
+
+            // Highlight marker
+            if (activeMarker) {
+                activeMarker.setStyle({ radius: 5, fillColor: '#111827' });
+            }
+            const markerEntry = markerMap[city.city.toLowerCase()];
+            if (markerEntry) {
+                activeMarker = markerEntry.marker;
+                activeMarker.setStyle({ radius: 8, fillColor: '#dc2626' });
+            }
+
+            document.getElementById('inspTag').textContent = "CITY STATION INTELLIGENCE";
+            document.getElementById('inspCityName').textContent = city.city;
+            document.getElementById('inspLocationSub').textContent = `${city.state} • ${city.region} India • Population Hub`;
+
+            document.getElementById('kpiMetric1Title').textContent = "PM2.5 Concentration";
+            document.getElementById('kpiMetric1Val').textContent = `${city.pm25} µg/m³`;
+            document.getElementById('kpiMetric1Val').style.color = getPM25Color(city.pm25);
+
+            document.getElementById('kpiMetric2Val').textContent = `${city.latest_aqi} (${city.bucket})`;
+            document.getElementById('kpiMetric2Val').style.color = getAQIColor(city.latest_aqi);
+
+            // Pollutants
+            document.getElementById('chipPM10').textContent = city.pm10 || 'N/A';
+            document.getElementById('chipNO2').textContent = city.no2 || 'N/A';
+            document.getElementById('chipSO2').textContent = city.so2 || 'N/A';
+            document.getElementById('chipCO').textContent = city.co ? city.co + ' mg' : 'N/A';
+            document.getElementById('chipDom').textContent = city.dominant_pollutant || 'PM2.5';
+
+            // Buttons
+            document.getElementById('inspBtnReport').href = `/report/${encodeURIComponent(city.city)}`;
+            document.getElementById('inspBtnExplorer').href = `/explorer?city=${encodeURIComponent(city.city)}`;
+
+            // Fetch live weather & advisory
+            try {
+                const res = await fetch(`/api/city/${encodeURIComponent(city.city)}`);
+                const data = await res.json();
+                if (data.success) {
+                    const w = data.weather?.weather;
+                    if (w) {
+                        document.getElementById('inspWeatherIcon').textContent = w.icon;
+                        document.getElementById('inspWeatherTemp').textContent = `${w.temperature}°C`;
+                        document.getElementById('inspWeatherCond').textContent = w.condition;
+                        document.getElementById('inspHumidity').textContent = `${w.humidity}%`;
+                        document.getElementById('inspWind').textContent = `${w.wind_speed} km/h`;
+                    }
+
+                    const adv = data.advisory;
+                    if (adv) {
+                        document.getElementById('inspAdvTitle').textContent = `Advisory (${adv.bucket} AQI):`;
+                        document.getElementById('inspAdvText').textContent = adv.summary;
+                    }
+                }
+            } catch (err) {
+                console.error("City details fetch error:", err);
+            }
+        }
+
+        function setMetricMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnModePM25').classList.toggle('active', mode === 'pm25');
+            document.getElementById('btnModeAQI').classList.toggle('active', mode === 'aqi');
+
+            document.getElementById('legendTitle').innerHTML = mode === 'pm25' 
+                ? 'PM 2.5 Average<br><span style="font-size:11px; font-weight:normal; color:#64748b;">(micro-gram/m3)</span>'
+                : 'National AQI Index<br><span style="font-size:11px; font-weight:normal; color:#64748b;">(CPCB Scale)</span>';
+
+            updateLegendItems(mode);
+            renderChoropleth();
+        }
+
+        function addCustomLegend() {
+            const legend = L.control({ position: 'bottomright' });
+            legend.onAdd = function () {
+                const div = L.DomUtil.create('div', 'user-styled-legend');
+                div.innerHTML = `
+                    <div class="legend-title" id="legendTitle">PM 2.5 Average<br><span style="font-size:11px; font-weight:normal; color:#64748b;">(micro-gram/m3)</span></div>
+                    <div id="legendItemsList"></div>
+                    <div style="margin-top:10px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:11px; color:#475569;">
+                        <span style="display:inline-block; width:8px; height:8px; background:#111827; border-radius:50%; margin-right:4px;"></span> Monitored City Station
+                    </div>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+            updateLegendItems('pm25');
+        }
+
+        function updateLegendItems(mode) {
+            const container = document.getElementById('legendItemsList');
+            if (!container) return;
+
+            if (mode === 'pm25') {
+                container.innerHTML = `
+                    <div class="legend-row"><span class="legend-box" style="background:#4ade80;"></span> &lt; 10 : WHO Guideline</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#fef08a;"></span> 10 - 40 : India NAAQS</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#facc15;"></span> 40 - 60</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#fb923c;"></span> 60 - 90</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#dc2626;"></span> &gt; 90</div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="legend-row"><span class="legend-box" style="background:#4ade80;"></span> 0 - 50 (Good)</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#a3e635;"></span> 51 - 100 (Satisfactory)</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#facc15;"></span> 101 - 200 (Moderate)</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#fb923c;"></span> 201 - 300 (Poor)</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#ef4444;"></span> 301 - 400 (Very Poor)</div>
+                    <div class="legend-row"><span class="legend-box" style="background:#991b1b;"></span> 401+ (Severe)</div>
+                `;
+            }
+        }
+
+        function handleSearch(query) {
+            if (!query || !query.trim()) return;
+            const q = query.trim().toLowerCase();
+
+            // Check if matches city
+            const cityMatch = mapData.cities.find(c => c.city.toLowerCase().includes(q));
+            if (cityMatch) {
+                map.flyTo([cityMatch.lat, cityMatch.lon], 8, { duration: 1 });
+                selectCity(cityMatch);
+                return;
+            }
+
+            // Check if matches state
+            const stateMatch = Object.keys(mapData.state_data).find(s => s.toLowerCase().includes(q));
+            if (stateMatch) {
+                const sInfo = mapData.state_data[stateMatch];
+                selectState(sInfo.state_name);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initChoroplethMap);
+    </script>
+</body>
+</html>

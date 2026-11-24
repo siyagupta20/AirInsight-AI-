@@ -1,0 +1,423 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Discovery | AirInsight AI</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-icon">✦</span>
+        AirInsight <span>AI</span>
+    </div>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/map">India Map</a>
+        <a href="/explorer">Explorer</a>
+        <a href="/discovery" class="active">AI Discovery</a>
+        <a href="/insights">Insights</a>
+        <a href="/compare">Compare</a>
+        <a href="/rankings">Rankings</a>
+    </nav>
+    <a href="/explorer" class="nav-button">Explore City →</a>
+</header>
+
+<section class="container">
+
+    <div class="page-header">
+        <p>UNSUPERVISED MACHINE LEARNING</p>
+        <h1>AI Pollution Discovery</h1>
+        <p>Discover hidden pollution patterns using intelligent clustering algorithms.</p>
+    </div>
+
+    <div class="card">
+        <h2>Explore Pollution Patterns</h2>
+
+        <label for="citySelect">Select City</label>
+        <select id="citySelect">
+            <option value="">Loading cities...</option>
+        </select>
+
+        <label for="algorithm">Select Clustering Algorithm</label>
+        <select id="algorithm">
+            <option value="dbscan">DBSCAN Clustering</option>
+            <option value="hierarchical">Hierarchical Clustering</option>
+        </select>
+
+        <div id="dbscanSettings">
+            <label for="eps">Epsilon (DBSCAN)</label>
+            <input type="number" id="eps" value="0.8" min="0.1" max="10" step="0.1">
+
+            <label for="minSamples">Minimum Samples</label>
+            <input type="number" id="minSamples" value="5" min="2">
+        </div>
+
+        <div id="hierSettings" style="display:none;">
+            <label for="clusters">Number of Clusters</label>
+            <input type="number" id="clusters" value="4" min="2" max="20">
+        </div>
+
+        <button onclick="runDiscovery()">Discover Patterns →</button>
+
+        <p id="status"></p>
+    </div>
+
+    <div id="results" style="display:none;">
+
+        <h2>Clustering Results</h2>
+
+        <div class="dashboard-grid">
+
+            <div class="card">
+                <h3>Total Clusters</h3>
+                <h1 id="clusterCount">-</h1>
+            </div>
+
+            <div class="card">
+                <h3>Noise / Outliers</h3>
+                <h1 id="noiseCount">-</h1>
+            </div>
+
+            <div class="card">
+                <h3>Records Analysed</h3>
+                <h1 id="recordCount">-</h1>
+            </div>
+
+        </div>
+
+        <!-- Evaluation Metrics -->
+
+        <div class="card">
+            <h2>Clustering Evaluation Metrics</h2>
+
+            <div class="dashboard-grid">
+
+                <div class="card">
+                    <h3>Silhouette Score</h3>
+                    <h1 id="silhouetteScore">N/A</h1>
+                    <p>Higher is better</p>
+                </div>
+
+                <div class="card">
+                    <h3>Davies-Bouldin Index</h3>
+                    <h1 id="daviesBouldinScore">N/A</h1>
+                    <p>Lower is better</p>
+                </div>
+
+                <div class="card">
+                    <h3>Calinski-Harabasz Score</h3>
+                    <h1 id="calinskiScore">N/A</h1>
+                    <p>Higher is generally better</p>
+                </div>
+
+            </div>
+
+            <p id="evaluationMessage"></p>
+        </div>
+
+        <!-- PCA Visualization -->
+
+        <div class="card">
+            <h2>Pollution Pattern Visualization</h2>
+            <div id="clusterChart" style="height:450px;"></div>
+        </div>
+
+        <!-- Cluster Distribution -->
+
+        <div class="card">
+            <h2>Cluster Distribution</h2>
+            <div id="distributionChart" style="height:350px;"></div>
+        </div>
+
+        <!-- Cluster Summary -->
+
+        <div class="card">
+            <h2>Cluster Summary</h2>
+            <div id="summary"></div>
+        </div>
+
+    </div>
+
+</section>
+
+<footer class="footer">
+    <h3>✦ AirInsight AI</h3>
+    <p>An Unsupervised Machine Learning Project for Air Pollution Pattern Discovery.</p>
+</footer>
+
+<script>
+
+const citySelect = document.getElementById("citySelect");
+const algorithm = document.getElementById("algorithm");
+
+async function loadCities() {
+
+    try {
+
+        const response = await fetch("/api/cities");
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Unable to load cities.");
+        }
+
+        citySelect.innerHTML = '<option value="">Choose a city</option>';
+
+        data.cities.forEach(city => {
+
+            const option = document.createElement("option");
+            option.value = city;
+            option.textContent = city;
+
+            citySelect.appendChild(option);
+
+        });
+
+    } catch (error) {
+
+        citySelect.innerHTML = '<option value="">Unable to load cities</option>';
+
+        document.getElementById("status").textContent =
+            error.message;
+
+    }
+}
+
+
+// Algorithm settings
+
+algorithm.addEventListener("change", function() {
+
+    document.getElementById("dbscanSettings").style.display =
+        this.value === "dbscan" ? "block" : "none";
+
+    document.getElementById("hierSettings").style.display =
+        this.value === "hierarchical" ? "block" : "none";
+
+});
+
+
+// Run Discovery
+
+async function runDiscovery() {
+
+    const city = citySelect.value;
+    const method = algorithm.value;
+    const status = document.getElementById("status");
+
+    if (!city) {
+        status.textContent = "Please select a city first.";
+        return;
+    }
+
+    status.textContent = "Analysing pollution data...";
+
+    try {
+
+        let url = `/api/discovery/${method}/${encodeURIComponent(city)}`;
+
+        if (method === "dbscan") {
+
+            const eps = document.getElementById("eps").value;
+            const minSamples = document.getElementById("minSamples").value;
+
+            url += `?eps=${eps}&min_samples=${minSamples}`;
+
+        } else {
+
+            const clusters = document.getElementById("clusters").value;
+
+            url += `?n_clusters=${clusters}`;
+
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Analysis failed.");
+        }
+
+        document.getElementById("results").style.display = "block";
+
+
+        // Basic Results
+
+        document.getElementById("clusterCount").textContent =
+            data.cluster_count;
+
+        document.getElementById("noiseCount").textContent =
+            data.noise_count ?? "N/A";
+
+        document.getElementById("recordCount").textContent =
+            data.total_records;
+
+
+        // Evaluation Metrics
+
+        const evaluation = data.evaluation || {};
+
+        document.getElementById("silhouetteScore").textContent =
+            evaluation.silhouette_score ?? "N/A";
+
+        document.getElementById("daviesBouldinScore").textContent =
+            evaluation.davies_bouldin_score ?? "N/A";
+
+        document.getElementById("calinskiScore").textContent =
+            evaluation.calinski_harabasz_score ?? "N/A";
+
+        document.getElementById("evaluationMessage").textContent =
+            evaluation.message || "";
+
+
+        // PCA Cluster Visualization
+
+        const points = data.pca;
+        const labels = data.labels;
+
+        const uniqueLabels = [...new Set(labels)];
+
+        const traces = uniqueLabels.map(label => {
+
+            const indices = labels
+                .map((value, index) => value === label ? index : -1)
+                .filter(index => index !== -1);
+
+            return {
+
+                x: indices.map(i => points[i][0]),
+                y: indices.map(i => points[i][1]),
+
+                mode: "markers",
+                type: "scatter",
+
+                name: label === -1
+                    ? "Noise / Outliers"
+                    : "Cluster " + label,
+
+                marker: {
+                    size: 8,
+                    opacity: 0.75
+                }
+
+            };
+
+        });
+
+        Plotly.newPlot("clusterChart", traces, {
+
+            title: "Pollution Clusters (PCA)",
+
+            xaxis: {
+                title: "Principal Component 1"
+            },
+
+            yaxis: {
+                title: "Principal Component 2"
+            },
+
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)"
+
+        }, {
+            responsive: true
+        });
+
+
+        // Cluster Summary and Profiles
+
+        const summary = data.cluster_summary || {};
+        const profiles = data.cluster_profiles || {};
+
+        const summaryLabels = Object.keys(summary);
+        const summaryValues = Object.values(summary);
+
+        // Cluster Distribution Chart
+
+        Plotly.newPlot("distributionChart", [{
+
+            labels: summaryLabels.map(k =>
+                Number(k) === -1
+                    ? "Noise / Outliers"
+                    : "Cluster " + k
+            ),
+
+            values: summaryValues,
+
+            type: "pie",
+            hole: 0.4
+
+        }], {
+
+            title: "Records in Each Cluster",
+            paper_bgcolor: "rgba(0,0,0,0)"
+
+        }, {
+            responsive: true
+        });
+
+
+        // Cluster Summary
+
+        let summaryHTML = Object.entries(summary)
+            .map(([key, value]) =>
+                `<p>${Number(key) === -1
+                    ? "Noise / Outliers"
+                    : "Cluster " + key}: ${value} records</p>`
+            )
+            .join("");
+
+
+        // Cluster Profiles
+
+        let profilesHTML = Object.entries(profiles)
+            .map(([cluster, profile]) => {
+
+                const featuresHTML = Object.entries(profile)
+                    .map(([feature, value]) =>
+                        `<li>${feature}: ${Number(value).toFixed(2)}</li>`
+                    )
+                    .join("");
+
+                return `
+                    <div class="cluster-profile">
+                        <h4>Cluster ${cluster} Profile</h4>
+                        <ul>${featuresHTML}</ul>
+                    </div>
+                `;
+
+            })
+            .join("");
+
+
+        document.getElementById("summary").innerHTML =
+            summaryHTML +
+            `<h3>Cluster Profiles</h3>` +
+            profilesHTML;
+
+
+        status.textContent = "Analysis completed successfully!";
+
+    } catch (error) {
+
+        status.textContent = "Error: " + error.message;
+
+    }
+
+}
+
+loadCities();
+
+</script>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>

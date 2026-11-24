@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirInsight AI | AI-Based Air Pollution Hotspot & Pattern Discovery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <!-- Unified Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+
+        <nav>
+            <a href="{{ url_for('home') }}" class="active">Home</a>
+            <a href="{{ url_for('map_page') }}">India Map</a>
+            <a href="{{ url_for('explorer') }}">Explorer</a>
+            <a href="{{ url_for('discovery') }}">AI Discovery</a>
+            <a href="{{ url_for('insights') }}">Insights</a>
+            <a href="{{ url_for('compare_page') }}">Compare</a>
+            <a href="{{ url_for('rankings_page') }}">Rankings</a>
+        </nav>
+
+        <a href="{{ url_for('map_page') }}" class="nav-button">
+            View Live Map →
+        </a>
+    </header>
+
+    <main>
+
+        <!-- Hero Section -->
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <div class="hero-tag">
+                    <span class="status-dot"></span>
+                    AI-POWERED ENVIRONMENTAL INTELLIGENCE
+                </div>
+
+                <h1>
+                    AI-Based Air Pollution Hotspot &
+                    <span>Pattern Discovery System.</span>
+                </h1>
+
+                <p>
+                    Analysing air pollution data across Indian cities to discover hidden environmental patterns, hotspots, and similarities using Unsupervised Machine Learning.
+                </p>
+
+                <div class="hero-buttons">
+                    <a href="{{ url_for('map_page') }}" class="primary-button">
+                        Interactive India Map →
+                    </a>
+
+                    <a href="{{ url_for('discovery') }}" class="secondary-button">
+                        AI Clustering Lab
+                    </a>
+
+                    <a href="{{ url_for('compare_page') }}" class="secondary-button" style="border:1px solid #087F5B; color:#087F5B;">
+                        Compare Cities
+                    </a>
+                </div>
+
+                <div class="hero-note">
+                    Powered by Hierarchical Clustering, DBSCAN, PCA, and CPCB National AQI Standards
+                </div>
+
+            </div>
+
+            <div class="hero-visual">
+
+                <div class="visual-card">
+
+                    <div class="visual-header">
+                        <div>
+                            <span class="small-label">ENVIRONMENTAL INTELLIGENCE</span>
+                            <h3>AirInsight Discovery Hub</h3>
+                        </div>
+
+                        <span class="live-badge">
+                            ● 26 CITIES ACTIVE
+                        </span>
+                    </div>
+
+                    <div class="visual-map">
+                        <div class="map-grid"></div>
+                        <div class="map-point point-one"></div>
+                        <div class="map-point point-two"></div>
+                        <div class="map-point point-three"></div>
+                        <div class="map-point point-four"></div>
+                        <div class="map-point point-five"></div>
+                        <div class="map-label">INDIA MONITORED</div>
+                    </div>
+
+                    <div class="visual-footer">
+                        <div>
+                            <span class="legend-dot green"></span>
+                            <span>Clean & Background Profiles</span>
+                        </div>
+
+                        <div>
+                            <span class="legend-dot orange"></span>
+                            <span>Critical Hotspots Identified</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Core ML Pipeline Section -->
+        <section class="intro-section">
+
+            <div class="section-heading">
+                <span class="section-tag">UNSUPERVISED MACHINE LEARNING PIPELINE</span>
+
+                <h2>
+                    How AirInsight AI Discovers
+                    <span>Hidden Pollution Dynamics.</span>
+                </h2>
+
+                <p>
+                    By extracting high-dimensional chemical concentrations without human label bias, our unsupervised pipeline automatically detects natural groupings, dense pollution pockets, and anomalous outlier events.
+                </p>
+            </div>
+
+            <div class="feature-grid">
+
+                <div class="feature-card">
+                    <div class="feature-icon">🧹</div>
+                    <h3>1. Preprocessing & Scaling</h3>
+                    <p>
+                        Handled missing values using median imputation, selected essential features (PM2.5, PM10, NO2, SO2, CO, O3), and standardized dimensions with StandardScaler.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌳</div>
+                    <h3>2. Hierarchical Clustering</h3>
+                    <p>
+                        Applied Agglomerative Clustering with Ward's minimum variance linkage to construct dendrogram clusters of similar air quality regimes.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>3. DBSCAN Hotspot Detection</h3>
+                    <p>
+                        Density-Based Spatial Clustering discovers arbitrarily shaped dense pollution cores while isolating hazardous outlier events as noise (label -1).
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>4. PCA Dimensionality Reduction</h3>
+                    <p>
+                        Synthesized 10+ correlated pollutant vectors into 2 Principal Components (PC1 & PC2) for intuitive 2D scatter pattern visualization.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📐</div>
+                    <h3>5. Mathematical Evaluation</h3>
+                    <p>
+                        Evaluated cluster separability and cohesion using Silhouette Score, Davies-Bouldin Index, and Calinski-Harabasz Score.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🏥</div>
+                    <h3>6. Clinical Health Advisory</h3>
+                    <p>
+                        Automated clinical recommendation engine converting calculated sub-indices into tailored guidance for sensitive groups, masks, and purifiers.
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- System Capabilities Showcase Grid -->
+        <section class="workflow-section" style="background:#f8fafc;">
+
+            <div class="section-heading">
+                <span class="section-tag">COMPREHENSIVE CAPABILITIES</span>
+                <h2>Explore the System <span>Modules.</span></h2>
+            </div>
+
+            <div class="workflow-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+
+                <a href="{{ url_for('map_page') }}" class="workflow-card" style="text-decoration:none; color:inherit;">
+                    <span>01</span>
+                    <h3>Interactive India Map</h3>
+                    <p>Geospatial Leaflet map displaying 26 monitoring stations with AQI severity color pins and hotspot radar rings.</p>
+                </a>
+
+                <a href="{{ url_for('compare_page') }}" class="workflow-card" style="text-decoration:none; color:inherit;">
+                    <span>02</span>
+                    <h3>City Comparison Engine</h3>
+                    <p>Side-by-side multi-pollutant comparison, multi-dimensional radar charts, and AI-generated difference summaries.</p>
+                </a>
+
+                <a href="{{ url_for('rankings_page') }}" class="workflow-card" style="text-decoration:none; color:inherit;">
+                    <span>03</span>
+                    <h3>National Rankings</h3>
+                    <p>Cleanest and most polluted Indian cities leaderboards, podiums, and regional North vs South analysis.</p>
+                </a>
+
+                <a href="{{ url_for('explorer') }}" class="workflow-card" style="text-decoration:none; color:inherit;">
+                    <span>04</span>
+                    <h3>Live Weather & Explorer</h3>
+                    <p>Real-time weather parameters, current AQI, complete pollutant breakdown, and clinical safety recommendations.</p>
+                </a>
+
+            </div>
+
+        </section>
+
+        <!-- Call To Action -->
+        <section class="cta-section">
+
+            <h2>Ready to Explore Air Pollution Patterns?</h2>
+
+            <p>
+                Start uncovering hidden environmental patterns, comparing cities, and generating downloadable reports with AirInsight AI.
+            </p>
+
+            <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
+                <a href="{{ url_for('map_page') }}" class="primary-button">
+                    Open India Pollution Map →
+                </a>
+                <a href="{{ url_for('discovery') }}" class="secondary-button" style="background:white; color:#087F5B;">
+                    Launch AI Discovery Lab
+                </a>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+
+        <p>
+            An Unsupervised Machine Learning Project for Air Pollution Hotspot & Pattern Discovery across Indian Cities.
+        </p>
+
+        <span>© 2026 AirInsight AI. All rights reserved.</span>
+
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>

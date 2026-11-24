@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Quality Insights & Historical Trends | AirInsight AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <style>
+        .insights-container {
+            max-width: 1300px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        .insights-header {
+            margin-bottom: 25px;
+        }
+
+        .insights-header h1 {
+            font-size: 36px;
+            color: #102B26;
+            margin-bottom: 8px;
+        }
+
+        .insights-header p {
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        .city-selector-bar {
+            background: white;
+            padding: 20px 26px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .city-selector-bar select {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+            min-width: 220px;
+        }
+
+        .btn-insights {
+            padding: 10px 22px;
+            border-radius: 8px;
+            background: #087F5B;
+            color: white;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-insights:hover {
+            background: #065F46;
+        }
+
+        .insight-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+        .insight-card {
+            background: white;
+            padding: 20px 24px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.03);
+        }
+
+        .insight-card h3 {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .insight-card p {
+            font-size: 28px;
+            font-weight: 800;
+            color: #087F5B;
+            margin: 0;
+        }
+
+        .charts-double-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .charts-double-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.03);
+            margin-bottom: 30px;
+        }
+
+        .chart-container h2 {
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        .seasonal-callout {
+            background: linear-gradient(135deg, #f0fdf4, #e6f7ef);
+            border-left: 4px solid #087F5B;
+            padding: 20px 24px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            line-height: 1.7;
+            font-size: 15px;
+            color: #1e3a34;
+        }
+
+        .status-message {
+            font-size: 14px;
+            color: #087F5B;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Unified Navbar -->
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">✦</span>
+            AirInsight <span>AI</span>
+        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/map">India Map</a>
+            <a href="/explorer">Explorer</a>
+            <a href="/discovery">AI Discovery</a>
+            <a href="/insights" class="active">Insights</a>
+            <a href="/compare">Compare</a>
+            <a href="/rankings">Rankings</a>
+        </nav>
+        <a href="/explorer" class="nav-button">Explore City →</a>
+    </header>
+
+    <main class="insights-container">
+
+        <section class="insights-header">
+            <h1>Air Quality Insights & Historical Dynamics</h1>
+            <p>Uncover multi-year trends, seasonal winter smog vs monsoon cleansing cycles, and long-term environmental patterns.</p>
+        </section>
+
+        <div class="city-selector-bar">
+            <label for="citySelect" style="font-weight:700; color:#334155; font-size:14px;">Select City:</label>
+            <select id="citySelect">
+                <option value="">Loading cities...</option>
+            </select>
+            <button class="btn-insights" onclick="loadInsights()">Generate Insights →</button>
+            <div id="status" class="status-message">Select a city to inspect trends.</div>
+        </div>
+
+        <section class="insight-cards">
+            <div class="insight-card">
+                <h3>Total Records Analysed</h3>
+                <p id="totalRecords">--</p>
+            </div>
+            <div class="insight-card">
+                <h3>Historical Mean AQI</h3>
+                <p id="meanAQI">--</p>
+            </div>
+            <div class="insight-card">
+                <h3>Average PM2.5</h3>
+                <p id="avgPM25">--</p>
+            </div>
+            <div class="insight-card">
+                <h3>Average PM10</h3>
+                <p id="avgPM10">--</p>
+            </div>
+            <div class="insight-card">
+                <h3>Latest Recorded AQI</h3>
+                <p id="latestAQI">--</p>
+            </div>
+        </section>
+
+        <!-- Seasonal Callout -->
+        <div class="seasonal-callout" id="seasonalitySummaryBox">
+            <strong>Seasonal Dynamics:</strong> Select a city to generate seasonal winter vs monsoon insights.
+        </div>
+
+        <!-- 2 Grid Charts: Monthly Seasonality & Yearly Progression -->
+        <div class="charts-double-grid">
+            <div class="chart-container" style="margin-bottom:0;">
+                <h2>Monthly Seasonal Variation (Winter Spike vs Monsoon Dip)</h2>
+                <div id="monthlyChart" style="height:350px;"></div>
+            </div>
+            <div class="chart-container" style="margin-bottom:0;">
+                <h2>Year-over-Year Pollution Progression (2015 - 2020)</h2>
+                <div id="yearlyChart" style="height:350px;"></div>
+            </div>
+        </div>
+
+        <!-- Time Series Moving Average Chart -->
+        <div class="chart-container" style="margin-top:30px;">
+            <h2>Recent Pollution Trend with 7-Day & 30-Day Moving Averages</h2>
+            <div id="movingAvgChart" style="height:380px;"></div>
+        </div>
+
+        <!-- Health & Safety Panel -->
+        <div class="chart-container">
+            <h2>Clinical Health & Safety Recommendations</h2>
+            <div id="healthSummary" style="font-size:15px; color:#334155; line-height:1.7;"></div>
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <h3>✦ AirInsight AI</h3>
+        <p>Unsupervised Machine Learning & Environmental Pattern Intelligence for India.</p>
+    </footer>
+
+    <script>
+        const citySelect = document.getElementById("citySelect");
+        const statusMessage = document.getElementById("status");
+
+        async function loadCities() {
+            try {
+                const response = await fetch("/api/cities");
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+
+                citySelect.innerHTML = '<option value="">Select City</option>';
+                data.cities.forEach(function(city) {
+                    const option = document.createElement("option");
+                    option.value = city;
+                    option.textContent = city;
+                    citySelect.appendChild(option);
+                });
+
+                if (data.cities.length > 0) {
+                    citySelect.value = "Delhi";
+                    loadInsights();
+                }
+            } catch (error) {
+                statusMessage.textContent = error.message;
+            }
+        }
+
+        async function loadInsights() {
+            const city = citySelect.value;
+            if (!city) {
+                statusMessage.textContent = "Please select a city.";
+                return;
+            }
+
+            statusMessage.textContent = `Analysing trends and statistics for ${city}...`;
+
+            try {
+                // Fetch basic city data & trends in parallel
+                const [cityRes, trendsRes, advisoryRes] = await Promise.all([
+                    fetch("/api/city/" + encodeURIComponent(city)),
+                    fetch("/api/trends/" + encodeURIComponent(city)),
+                    fetch("/api/advisory/" + encodeURIComponent(city))
+                ]);
+
+                const cityData = await cityRes.json();
+                const trendsData = await trendsRes.json();
+                const advData = await advisoryRes.json();
+
+                if (!cityData.success) throw new Error(cityData.error);
+
+                const latest = cityData.latest_record || {};
+                const records = cityData.recent_records || [];
+
+                document.getElementById("totalRecords").textContent = cityData.total_records;
+                document.getElementById("latestAQI").textContent = latest.AQI ?? "N/A";
+
+                // Trends KPIs
+                if (trendsData.success) {
+                    const monthly = trendsData.monthly_seasonality || [];
+                    const yearly = trendsData.yearly_progression || [];
+                    const timeSeries = trendsData.time_series || [];
+                    const insights = trendsData.insights || {};
+
+                    const meanAqi = yearly.length ? (yearly.reduce((a, b) => a + (b.aqi || 0), 0) / yearly.length).toFixed(1) : "N/A";
+                    document.getElementById("meanAQI").textContent = meanAqi;
+
+                    const pm25Val = latest['PM2.5'] !== null && latest['PM2.5'] !== undefined ? Number(latest['PM2.5']).toFixed(1) + ' µg/m³' : 'N/A';
+                    const pm10Val = latest.PM10 !== null && latest.PM10 !== undefined ? Number(latest.PM10).toFixed(1) + ' µg/m³' : 'N/A';
+                    document.getElementById("avgPM25").textContent = pm25Val;
+                    document.getElementById("avgPM10").textContent = pm10Val;
+
+                    // Seasonality Callout
+                    document.getElementById("seasonalitySummaryBox").innerHTML = `
+                        <strong>✦ Seasonal Trend Discovery for ${city}:</strong> Historical analysis reveals a seasonal contrast of <strong>${insights.seasonal_contrast ?? 'N/A'} AQI points</strong>. Winter months (Nov-Jan) experience severe stagnation with an average AQI of <strong>${insights.winter_avg_aqi ?? 'N/A'}</strong>, whereas monsoon rainfall (Jul-Sep) cleanses the air down to <strong>${insights.monsoon_avg_aqi ?? 'N/A'}</strong>. The peak pollution month is typically <strong>${insights.peak_pollution_month}</strong>.
+                    `;
+
+                    // Monthly Seasonality Chart
+                    Plotly.newPlot("monthlyChart", [
+                        { x: monthly.map(m => m.month), y: monthly.map(m => m.aqi), name: 'Mean AQI', type: 'scatter', mode: 'lines+markers', line: { color: '#087F5B', width: 3 } },
+                        { x: monthly.map(m => m.month), y: monthly.map(m => m.pm25), name: 'PM2.5 (µg/m³)', type: 'bar', marker: { color: 'rgba(239, 68, 68, 0.4)' } }
+                    ], {
+                        margin: { t: 20, r: 20, l: 40, b: 35 },
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)'
+                    }, { responsive: true });
+
+                    // Yearly Progression Chart
+                    Plotly.newPlot("yearlyChart", [
+                        { x: yearly.map(y => String(y.year)), y: yearly.map(y => y.aqi), name: 'Yearly AQI', type: 'bar', marker: { color: '#087F5B' } },
+                        { x: yearly.map(y => String(y.year)), y: yearly.map(y => y.pm25), name: 'PM2.5', type: 'scatter', mode: 'lines+markers', line: { color: '#ef4444', width: 2 } }
+                    ], {
+                        margin: { t: 20, r: 20, l: 40, b: 35 },
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)'
+                    }, { responsive: true });
+
+                    // Moving Average Chart
+                    Plotly.newPlot("movingAvgChart", [
+                        { x: timeSeries.map(t => t.date), y: timeSeries.map(t => t.aqi), name: 'Daily AQI', type: 'scatter', mode: 'markers', marker: { size: 4, color: '#94a3b8', opacity: 0.6 } },
+                        { x: timeSeries.map(t => t.date), y: timeSeries.map(t => t.aqi_ma7), name: '7-Day Rolling Avg', type: 'scatter', mode: 'lines', line: { color: '#f59e0b', width: 2 } },
+                        { x: timeSeries.map(t => t.date), y: timeSeries.map(t => t.aqi_ma30), name: '30-Day Trend', type: 'scatter', mode: 'lines', line: { color: '#087F5B', width: 3 } }
+                    ], {
+                        margin: { t: 20, r: 20, l: 40, b: 35 },
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)'
+                    }, { responsive: true });
+                }
+
+                // Health Advisory
+                if (advData.success) {
+                    document.getElementById("healthSummary").innerHTML = `
+                        <p><strong>AQI Classification:</strong> <span style="display:inline-block; padding:3px 10px; border-radius:12px; background:${advData.badge_bg}; color:${advData.badge_text}; font-weight:700;">${advData.bucket} (AQI ${advData.aqi})</span></p>
+                        <p><strong>Clinical Summary:</strong> ${advData.summary}</p>
+                        <p><strong>General Guidance:</strong> ${advData.general_public}</p>
+                        <p><strong>Sensitive Groups (Asthma, Elderly, Children):</strong> ${advData.sensitive_groups}</p>
+                        <p><strong>Protective Measures:</strong> ${advData.mask_recommendation} • ${advData.air_purifier}</p>
+                    `;
+                }
+
+                statusMessage.textContent = `Insights successfully generated for ${city}!`;
+            } catch (error) {
+                statusMessage.textContent = "Error: " + error.message;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", loadCities);
+    </script>
+</body>
+</html>
