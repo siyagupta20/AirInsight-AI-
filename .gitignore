@@ -15,6 +15,11 @@ dataset/*.csv
 # Large unsimplified GIS files
 static/data/india_states.geojson
 
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
 # Operating System files
 .DS_Store
 Thumbs.db
